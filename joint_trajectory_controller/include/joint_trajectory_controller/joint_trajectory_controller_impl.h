@@ -368,6 +368,8 @@ update(const ros::Time& time, const ros::Duration& period)
   // fetch the currently followed trajectory, it has been updated by the non-rt thread with something that starts in the
   // next control cycle, leaving the current cycle without a valid trajectory.
 
+  std::vector<double> old_desired_position {desired_state_.position};
+
   // Update current state and state error
   for (unsigned int i = 0; i < joints_.size(); ++i)
   {
@@ -465,6 +467,11 @@ update(const ros::Time& time, const ros::Duration& period)
     current_active_goal.reset(); // do not publish feedback
     rt_active_goal_.reset();
     successful_joint_traj_.reset();
+  }
+
+  if ( !checkStates(old_desired_position, desired_state_.position, period) )
+  {
+    reactToFailedStateCheck(time_data.uptime, curr_traj);
   }
 
   // Hardware interface adapter: Generate and send commands
@@ -809,6 +816,23 @@ setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
     }
   }
   curr_trajectory_box_.set(hold_trajectory_ptr_);
+}
+
+template <class SegmentImpl, class HardwareInterface>
+inline bool JointTrajectoryController<SegmentImpl, HardwareInterface>::
+checkStates(const std::vector<double>& /* old_desired_position */,
+            const std::vector<double>& /* new_desired_positioin */,
+            const ros::Duration& /* period */) const
+{
+  // To be implemented by derived class
+  return true;
+}
+
+template <class SegmentImpl, class HardwareInterface>
+inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
+reactToFailedStateCheck(const ros::Time& updated_uptime, const Trajectory& curr_traj)
+{
+  // To be implemented by derived class
 }
 
 } // namespace

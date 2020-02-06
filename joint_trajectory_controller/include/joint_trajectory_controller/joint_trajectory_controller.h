@@ -246,6 +246,12 @@ protected:
    */
   void setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh=RealtimeGoalHandlePtr());
 
+private:
+  virtual bool checkStates(const std::vector<double>& old_desired_position,
+                           const std::vector<double>& new_desired_positioin,
+                           const ros::Duration& period) const;
+  virtual void reactToFailedStateCheck(const ros::Time& updated_uptime, const Trajectory& curr_traj);
+
 };
 
 } // namespace
