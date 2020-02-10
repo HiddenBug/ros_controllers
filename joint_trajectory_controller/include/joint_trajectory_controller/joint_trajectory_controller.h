@@ -198,6 +198,7 @@ protected:
 
   typename Segment::State current_state_;         ///< Preallocated workspace variable.
   typename Segment::State desired_state_;         ///< Preallocated workspace variable.
+  typename Segment::State old_desired_state_;     ///< Preallocated workspace variable.
   typename Segment::State state_error_;           ///< Preallocated workspace variable.
   typename Segment::State desired_joint_state_;   ///< Preallocated workspace variable.
   typename Segment::State state_joint_error_;     ///< Preallocated workspace variable.
@@ -247,9 +248,7 @@ protected:
   void setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh=RealtimeGoalHandlePtr());
 
 private:
-  virtual bool checkStates(const std::vector<double>& old_desired_position,
-                           const std::vector<double>& new_desired_positioin,
-                           const ros::Duration& period) const;
+  virtual bool checkStates(const ros::Duration& period) const;
   virtual void reactToFailedStateCheck(const ros::Time& updated_uptime, const Trajectory& curr_traj);
 
 };
