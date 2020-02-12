@@ -205,6 +205,8 @@ protected:
   typename Segment::State desired_joint_state_;   ///< Preallocated workspace variable.
   typename Segment::State state_joint_error_;     ///< Preallocated workspace variable.
 
+  std::unique_ptr<TrajectoryBuilder<SegmentImpl> > hold_traj_builder_;
+
   realtime_tools::RealtimeBuffer<TimeData> time_data_;
 
   ros::Duration state_publisher_period_;

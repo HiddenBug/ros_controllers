@@ -767,7 +767,7 @@ publishState(const ros::Time& time)
 }
 
 template <class SegmentImpl, class HardwareInterface>
-void JointTrajectoryController<SegmentImpl, HardwareInterface>::
+inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
 {
   assert(joint_names_.size() == hold_trajectory_ptr_->size());
