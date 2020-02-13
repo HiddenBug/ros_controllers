@@ -254,6 +254,8 @@ protected:
 protected:
   unsigned int getNumberOfJoints() const;
 
+  void updateStates(const ros::Time& sample_time, const Trajectory* const traj);
+
 private:
   /**
    * @brief Function which can be used to check the newly calculated states for certain conditions (e.g. speed limit
