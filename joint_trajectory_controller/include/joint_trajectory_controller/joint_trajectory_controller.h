@@ -284,6 +284,9 @@ private:
                                        const typename Segment::State& old_desired,
                                        const ros::Time& curr_uptime);
 
+private:
+  void setActionFeedback();
+
 };
 
 } // namespace
