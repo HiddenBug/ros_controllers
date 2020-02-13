@@ -251,6 +251,9 @@ protected:
    */
   void setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh=RealtimeGoalHandlePtr());
 
+protected:
+  unsigned int getNumberOfJoints() const;
+
 private:
   /**
    * @brief Function which can be used to check the newly calculated states for certain conditions (e.g. speed limit
