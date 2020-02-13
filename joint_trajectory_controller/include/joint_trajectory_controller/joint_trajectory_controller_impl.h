@@ -365,11 +365,13 @@ update(const ros::Time& time, const ros::Duration& period)
   curr_trajectory_box_.get(curr_traj_ptr);
   Trajectory& curr_traj = *curr_traj_ptr;
 
+  ros::Time old_uptime {time_data_.readFromRT()->uptime};
+
   // Update time data
   TimeData time_data;
   time_data.time   = time;                                     // Cache current time
   time_data.period = period;                                   // Cache current control period
-  time_data.uptime = time_data_.readFromRT()->uptime + period; // Update controller uptime
+  time_data.uptime = old_uptime + period; // Update controller uptime
   time_data_.writeFromNonRT(time_data); // TODO: Grrr, we need a lock-free data structure here!
 
   // NOTE: It is very important to execute the two above code blocks in the specified sequence: first get current
@@ -472,7 +474,7 @@ update(const ros::Time& time, const ros::Duration& period)
 
   if ( !checkStates(period) )
   {
-    reactToFailedStateCheck(time_data.uptime, curr_traj);
+    reactToFailedStateCheck(old_uptime, old_desired_state_, time_data.uptime);
   }
 
   // Hardware interface adapter: Generate and send commands
@@ -772,7 +774,9 @@ checkStates(const ros::Duration& /* period */) const
 
 template <class SegmentImpl, class HardwareInterface>
 inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
-reactToFailedStateCheck(const ros::Time& updated_uptime, const Trajectory& curr_traj)
+reactToFailedStateCheck(const ros::Time& old_uptime,
+                        const typename Segment::State& old_desired,
+                        const ros::Time& curr_uptime)
 {
   // To be implemented by derived class
 }

@@ -280,7 +280,9 @@ private:
    *
    * @param curr_traj Trajectory, currently, in trajectory box.
    */
-  virtual void reactToFailedStateCheck(const ros::Time& updated_uptime, const Trajectory& curr_traj);
+  virtual void reactToFailedStateCheck(const ros::Time& old_uptime,
+                                       const typename Segment::State& old_desired,
+                                       const ros::Time& curr_uptime);
 
 };
 
