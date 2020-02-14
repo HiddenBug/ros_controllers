@@ -208,6 +208,7 @@ protected:
   std::unique_ptr<TrajectoryBuilder<SegmentImpl> > hold_traj_builder_;
 
   realtime_tools::RealtimeBuffer<TimeData> time_data_;
+  TimeData old_time_data_;
 
   ros::Duration state_publisher_period_;
   ros::Duration action_monitor_period_;
@@ -280,9 +281,7 @@ private:
    *
    * @param curr_traj Trajectory, currently, in trajectory box.
    */
-  virtual void reactToFailedStateCheck(const ros::Time& old_uptime,
-                                       const typename Segment::State& old_desired,
-                                       const ros::Time& curr_uptime);
+  virtual void reactToFailedStateCheck(const ros::Time& curr_uptime);
 
 private:
   void setActionFeedback();
