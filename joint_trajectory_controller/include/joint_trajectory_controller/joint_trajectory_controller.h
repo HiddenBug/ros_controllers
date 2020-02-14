@@ -257,6 +257,9 @@ protected:
 
   void updateStates(const ros::Time& sample_time, const Trajectory* const traj);
 
+protected:
+  static TrajectoryPtr createHoldTrajectory(const unsigned int& number_of_joints);
+
 private:
   /**
    * @brief Function which can be used to check the newly calculated states for certain conditions (e.g. speed limit

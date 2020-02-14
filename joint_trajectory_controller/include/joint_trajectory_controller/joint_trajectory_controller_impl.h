@@ -189,8 +189,7 @@ preemptActiveGoal()
 template <class SegmentImpl, class HardwareInterface>
 JointTrajectoryController<SegmentImpl, HardwareInterface>::
 JointTrajectoryController()
-  : verbose_(false), // Set to true during debugging
-    hold_trajectory_ptr_(new Trajectory)
+  : verbose_(false) // Set to true during debugging
 {
   // The verbose parameter is for advanced use as it breaks real-time safety
   // by enabling ROS logging services
@@ -316,18 +315,7 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
 
   successful_joint_traj_ = boost::dynamic_bitset<>(getNumberOfJoints());
 
-  // Initialize trajectory with all joints
-  typename Segment::State current_joint_state_ = typename Segment::State(1);
-  for (unsigned int i = 0; i < n_joints; ++i)
-  {
-	  current_joint_state_.position[0]= current_state_.position[i];
-	  current_joint_state_.velocity[0]= current_state_.velocity[i];
-	  Segment hold_segment(0.0, current_joint_state_, 0.0, current_joint_state_);
-
-	  TrajectoryPerJoint joint_segment;
-	  joint_segment.resize(1, hold_segment);
-	  hold_trajectory_ptr_->push_back(joint_segment);
-  }
+  hold_trajectory_ptr_ = createHoldTrajectory(n_joints);
 
   if (stop_trajectory_duration_ == 0.0)
   {
@@ -817,6 +805,28 @@ setActionFeedback()
   current_active_goal->preallocated_feedback_->error.velocities      = state_error_.velocity;
   current_active_goal->setFeedback( current_active_goal->preallocated_feedback_ );
 
+}
+
+template <class SegmentImpl, class HardwareInterface>
+typename JointTrajectoryController<SegmentImpl, HardwareInterface>::TrajectoryPtr
+JointTrajectoryController<SegmentImpl, HardwareInterface>::createHoldTrajectory(const unsigned int& number_of_joints)
+{
+  TrajectoryPtr hold_traj {new Trajectory()};
+
+  typename Segment::State default_state       = typename Segment::State(number_of_joints);
+  typename Segment::State default_joint_state = typename Segment::State(1);
+  for (unsigned int i = 0; i < number_of_joints; ++i)
+  {
+    default_joint_state.position[0]= default_state.position[i];
+    default_joint_state.velocity[0]= default_state.velocity[i];
+    Segment hold_segment(0.0, default_joint_state, 0.0, default_joint_state);
+
+    TrajectoryPerJoint joint_segment;
+    joint_segment.resize(1, hold_segment);
+    hold_traj->push_back(joint_segment);
+  }
+
+  return hold_traj;
 }
 
 } // namespace
