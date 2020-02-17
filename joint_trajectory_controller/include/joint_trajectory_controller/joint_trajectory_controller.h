@@ -253,11 +253,31 @@ protected:
   void setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh=RealtimeGoalHandlePtr());
 
 protected:
+  /**
+   * @returns the number of joints of the robot.
+   */
   unsigned int getNumberOfJoints() const;
 
+  /**
+   * @brief Updates the states by sampling the specified trajectory for each joint
+   * at the specified sampling time.
+   *
+   * The current state is updated based on the values transmitted by the
+   * corresponding JointHandles.
+   *
+   * @param sample_time Time point at which the joint trajectories have to be sampled.
+   * @param traj Trajectory containing all joint trajectories currently under execution.
+   *
+   * @note This function is NOT thread safe but intended to be used in the
+   * update-function.
+   */
   void updateStates(const ros::Time& sample_time, const Trajectory* const traj);
 
 protected:
+  /**
+   * @returns a trajectory consisting of joint trajectories with one pre-allocated
+   * segment.
+   */
   static TrajectoryPtr createHoldTrajectory(const unsigned int& number_of_joints);
 
 private:
@@ -287,6 +307,13 @@ private:
   virtual void reactToFailedStateCheck(const ros::Time& curr_uptime);
 
 private:
+  /**
+   * @brief Updates the pre-allocated feedback of the current active goal (if any)
+   * based on the current state values.
+   *
+   * @note This function is NOT thread safe but intended to be used in the
+   * update-function.
+   */
   void setActionFeedback();
 
 };

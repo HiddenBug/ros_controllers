@@ -35,6 +35,10 @@
 namespace joint_trajectory_controller
 {
 
+/**
+ * @brief Builder creating a trajectory "simply" holding (without motion)
+ * the specified position.
+ */
 template<class SegmentImpl, class HardwareInterface>
 class HoldTrajectoryBuilder : public TrajectoryBuilder<SegmentImpl>
 {

@@ -33,6 +33,12 @@
 namespace joint_trajectory_controller
 {
 
+/**
+ * @brief Builder creating a trajectory stopping the robot.
+ *
+ * @note The start state of the stop motion and the final settle/hold state
+ * are eqal.
+ */
 template<class SegmentImpl>
 class StopTrajectoryBuilder : public TrajectoryBuilder<SegmentImpl>
 {

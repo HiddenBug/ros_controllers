@@ -43,6 +43,9 @@
 namespace joint_trajectory_controller
 {
 
+/**
+ * @brief Base class for classes used to construct diffent trajectory types.
+ */
 template<class SegmentImpl>
 class TrajectoryBuilder
 {
@@ -55,6 +58,10 @@ public:
   using RealtimeGoalHandlePtr = boost::shared_ptr<RealtimeGoalHandle>;
 
 public:
+  /**
+   * @brief Creates the type of trajectory described by the builder.
+   *
+   */
   virtual bool buildTrajectory(const typename Segment::Time& start_time,
                                Trajectory* hold_traj,
                                RealtimeGoalHandlePtr goal_handle) = 0;
