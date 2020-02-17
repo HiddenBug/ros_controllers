@@ -731,7 +731,11 @@ inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
 {
   assert(joint_names_.size() == hold_trajectory_ptr_->size());
-  hold_traj_builder_->buildTrajectory(time.toSec(), hold_trajectory_ptr_.get(), gh);
+  hold_traj_builder_
+      ->setStartTime(time.toSec())
+      ->setGoalHandle(gh)
+      ->buildTrajectory(hold_trajectory_ptr_.get());
+  hold_traj_builder_->reset();
   curr_trajectory_box_.set(hold_trajectory_ptr_);
 }
 

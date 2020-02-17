@@ -43,6 +43,13 @@ template<class SegmentImpl, class HardwareInterface>
 class HoldTrajectoryBuilder : public TrajectoryBuilder<SegmentImpl>
 {
 private:
+  using Segment               = JointTrajectorySegment<SegmentImpl>;
+  using TrajectoryPerJoint    = std::vector<Segment>;
+  using Trajectory            = std::vector<TrajectoryPerJoint>;
+
+  using RealtimeGoalHandle    = realtime_tools::RealtimeServerGoalHandle<control_msgs::FollowJointTrajectoryAction>;
+  using RealtimeGoalHandlePtr = boost::shared_ptr<RealtimeGoalHandle>;
+
   using JointHandle = typename HardwareInterface::ResourceHandleType;
 
 public:
@@ -50,17 +57,18 @@ public:
                         const std::vector<JointHandle>&  joints);
 
 public:
-  bool buildTrajectory(const typename TrajectoryBuilder<SegmentImpl>::Segment::Time& start_time,
-                       typename TrajectoryBuilder<SegmentImpl>::Trajectory* hold_traj,
-                       typename TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr goal_handle) override;
+  /**
+   * @brief See base class.
+   */
+  bool buildTrajectory(Trajectory* hold_traj) override;
 
 private:
   const unsigned int number_of_joints_;
   const std::vector<JointHandle>&  joints_;
 
 private: //Pre-allocated memory for real time usage of build function
-  typename TrajectoryBuilder<SegmentImpl>::Segment::State hold_start_state_ {typename TrajectoryBuilder<SegmentImpl>::Segment::State(1)};
-  typename TrajectoryBuilder<SegmentImpl>::Segment::State hold_end_state_   {typename TrajectoryBuilder<SegmentImpl>::Segment::State(1)};
+  typename Segment::State hold_start_state_ {typename Segment::State(1)};
+  typename Segment::State hold_end_state_   {typename Segment::State(1)};
 
 };
 
@@ -74,17 +82,22 @@ HoldTrajectoryBuilder<SegmentImpl, HardwareInterface>::HoldTrajectoryBuilder(con
 }
 
 template<class SegmentImpl, class HardwareInterface>
-bool HoldTrajectoryBuilder<SegmentImpl, HardwareInterface>::buildTrajectory(const typename TrajectoryBuilder<SegmentImpl>::Segment::Time& start_time,
-                                                                            typename TrajectoryBuilder<SegmentImpl>::Trajectory* hold_traj,
-                                                                            typename TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr goal_handle)
+bool HoldTrajectoryBuilder<SegmentImpl, HardwareInterface>::buildTrajectory(Trajectory* hold_traj)
 {
+  if(!TrajectoryBuilder<SegmentImpl>::getStartTime())
+  {
+    return false;
+  }
+
+  const typename Segment::Time start_time {TrajectoryBuilder<SegmentImpl>::getStartTime().value()};
+  RealtimeGoalHandlePtr goal_handle {TrajectoryBuilder<SegmentImpl>::getGoalHandle()};
   for (unsigned int joint_index = 0; joint_index < number_of_joints_; ++joint_index)
   {
     hold_start_state_.position[0]     =  joints_[joint_index].getPosition();
     hold_start_state_.velocity[0]     =  0.0;
     hold_start_state_.acceleration[0] =  0.0;
 
-    typename TrajectoryBuilder<SegmentImpl>::Segment& segment {(*hold_traj)[joint_index].front()};
+    Segment& segment {(*hold_traj)[joint_index].front()};
     segment.init(start_time, hold_start_state_,
                  start_time, hold_start_state_);
     segment.setGoalHandle(goal_handle);

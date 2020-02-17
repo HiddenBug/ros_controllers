@@ -28,6 +28,8 @@
 #ifndef TRAJECTORY_BUILDER_H
 #define TRAJECTORY_BUILDER_H
 
+#include <vector>
+
 // Boost
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
@@ -49,7 +51,7 @@ namespace joint_trajectory_controller
 template<class SegmentImpl>
 class TrajectoryBuilder
 {
-public:
+private:
   using Segment               = JointTrajectorySegment<SegmentImpl>;
   using TrajectoryPerJoint    = std::vector<Segment>;
   using Trajectory            = std::vector<TrajectoryPerJoint>;
@@ -58,15 +60,64 @@ public:
   using RealtimeGoalHandlePtr = boost::shared_ptr<RealtimeGoalHandle>;
 
 public:
+  TrajectoryBuilder<SegmentImpl>* setStartTime(const typename Segment::Time& start_time);
+  TrajectoryBuilder<SegmentImpl>* setGoalHandle(RealtimeGoalHandlePtr goal_handle);
+
+public:
+  virtual void reset();
+
+public: 
   /**
    * @brief Creates the type of trajectory described by the builder.
    *
+   * @param trajectory [Out] Trajectory which has to be build.
+   *
    */
-  virtual bool buildTrajectory(const typename Segment::Time& start_time,
-                               Trajectory* hold_traj,
-                               RealtimeGoalHandlePtr goal_handle) = 0;
+  virtual bool buildTrajectory(Trajectory* trajectory) = 0;
+
+protected:
+  RealtimeGoalHandlePtr getGoalHandle() const;
+  const boost::optional<typename Segment::Time>& getStartTime() const;
+
+private:
+  boost::optional<typename Segment::Time> start_time_   {boost::none};
+  boost::optional<RealtimeGoalHandlePtr> goal_handle_         {boost::none};
 
 };
+
+template<class SegmentImpl>
+inline TrajectoryBuilder<SegmentImpl>* TrajectoryBuilder<SegmentImpl>::setStartTime(const typename TrajectoryBuilder<SegmentImpl>::Segment::Time& start_time)
+{
+  start_time_ = start_time;
+  return this;
+}
+
+template<class SegmentImpl>
+inline const boost::optional<typename TrajectoryBuilder<SegmentImpl>::Segment::Time>& TrajectoryBuilder<SegmentImpl>::getStartTime() const
+{
+  return start_time_;
+}
+
+template<class SegmentImpl>
+inline TrajectoryBuilder<SegmentImpl>* TrajectoryBuilder<SegmentImpl>::setGoalHandle(TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr goal_handle)
+{
+  goal_handle_ = goal_handle;
+  return this;
+}
+
+template<class SegmentImpl>
+inline typename TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr TrajectoryBuilder<SegmentImpl>::getGoalHandle() const
+{
+  return goal_handle_ ? goal_handle_.value() : RealtimeGoalHandlePtr();
+}
+
+template<class SegmentImpl>
+inline void TrajectoryBuilder<SegmentImpl>::reset()
+{
+  start_time_ = boost::none;
+  goal_handle_ = boost::none;
+}
+
 
 }
 
