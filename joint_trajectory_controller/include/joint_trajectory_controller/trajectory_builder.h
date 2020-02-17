@@ -64,6 +64,10 @@ public:
   TrajectoryBuilder<SegmentImpl>* setGoalHandle(RealtimeGoalHandlePtr goal_handle);
 
 public:
+  /**
+   * @brief Ensures that builder does not influence life cycle of external variables
+   * by reseting all essential class members.
+   */
   virtual void reset();
 
 public: 
