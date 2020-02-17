@@ -54,7 +54,8 @@ private:
 
 public:
   StopTrajectoryBuilder(const unsigned int& number_of_joints,
-                        const typename Segment::Time& stop_traj_duration);
+                        const typename Segment::Time& stop_traj_duration,
+                        const typename Segment::State& hold_state);
 
 public:
   /**
@@ -72,15 +73,12 @@ public:
    */
   bool buildTrajectory(Trajectory* hold_traj) override;
 
-public:
-  StopTrajectoryBuilder<SegmentImpl>* setStartState(const typename Segment::State& start_state);
-
 private:
   const unsigned int number_of_joints_;
   const typename Segment::Time stop_traj_duration_;
-
-private:
-  boost::optional<const typename Segment::State&> start_state_  {boost::none};
+  // To always have the newest value of the hold state,
+  // a reference is stored.
+  const typename Segment::State& hold_state_;
 
 private: //Pre-allocated memory for real time usage of build function
   typename Segment::State hold_start_state_ {typename Segment::State(1)};
@@ -89,42 +87,36 @@ private: //Pre-allocated memory for real time usage of build function
 
 template<class SegmentImpl>
 StopTrajectoryBuilder<SegmentImpl>::StopTrajectoryBuilder(const unsigned int& number_of_joints,
-                                                          const typename Segment::Time& stop_traj_duration)
+                                                          const typename Segment::Time& stop_traj_duration,
+                                                          const typename Segment::State& hold_state)
   : number_of_joints_(number_of_joints)
   , stop_traj_duration_(stop_traj_duration)
+  , hold_state_(hold_state)
 {
-}
-
-template<class SegmentImpl>
-inline StopTrajectoryBuilder<SegmentImpl>* StopTrajectoryBuilder<SegmentImpl>::setStartState(const typename Segment::State& start_state)
-{
-  start_state_ = start_state;
-  return this;
 }
 
 template<class SegmentImpl>
 bool StopTrajectoryBuilder<SegmentImpl>::buildTrajectory(Trajectory* hold_traj)
 {
-  if(!start_state_ || !TrajectoryBuilder<SegmentImpl>::getStartTime())
+  if(!TrajectoryBuilder<SegmentImpl>::getStartTime())
   {
     return false;
   }
 
   const typename Segment::Time start_time {TrajectoryBuilder<SegmentImpl>::getStartTime().value()};
-  RealtimeGoalHandlePtr goal_handle {TrajectoryBuilder<SegmentImpl>::getGoalHandle()};
-
+  RealtimeGoalHandlePtr goal_handle {TrajectoryBuilder<SegmentImpl>::createGoalHandlePtr()};
   const typename Segment::Time end_time    {start_time + stop_traj_duration_};
   const typename Segment::Time end_time_2x {start_time + 2.0 * stop_traj_duration_};
   for (unsigned int joint_index = 0; joint_index < number_of_joints_; ++joint_index)
   {
     // If there is a time delay in the system it is better to calculate the hold trajectory starting from the
     // desired position. Otherwise there would be a jerk in the motion.
-    hold_start_state_.position[0]     =  start_state_.value().position[joint_index];
-    hold_start_state_.velocity[0]     =  start_state_.value().velocity[joint_index];
+    hold_start_state_.position[0]     =  hold_state_.position[joint_index];
+    hold_start_state_.velocity[0]     =  hold_state_.velocity[joint_index];
     hold_start_state_.acceleration[0] =  0.0;
 
-    hold_end_state_.position[0]       =  start_state_.value().position[joint_index];
-    hold_end_state_.velocity[0]       = -start_state_.value().velocity[joint_index];
+    hold_end_state_.position[0]       =  hold_state_.position[joint_index];
+    hold_end_state_.velocity[0]       = -hold_state_.velocity[joint_index];
     hold_end_state_.acceleration[0]   =  0.0;
 
     Segment& segment {(*hold_traj)[joint_index].front()};

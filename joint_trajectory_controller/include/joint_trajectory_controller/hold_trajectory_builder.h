@@ -90,7 +90,7 @@ bool HoldTrajectoryBuilder<SegmentImpl, HardwareInterface>::buildTrajectory(Traj
   }
 
   const typename Segment::Time start_time {TrajectoryBuilder<SegmentImpl>::getStartTime().value()};
-  RealtimeGoalHandlePtr goal_handle {TrajectoryBuilder<SegmentImpl>::getGoalHandle()};
+  RealtimeGoalHandlePtr goal_handle {TrajectoryBuilder<SegmentImpl>::createGoalHandlePtr()};
   for (unsigned int joint_index = 0; joint_index < number_of_joints_; ++joint_index)
   {
     hold_start_state_.position[0]     =  joints_[joint_index].getPosition();

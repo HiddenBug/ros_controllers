@@ -61,12 +61,12 @@ private:
 
 public:
   TrajectoryBuilder<SegmentImpl>* setStartTime(const typename Segment::Time& start_time);
-  TrajectoryBuilder<SegmentImpl>* setGoalHandle(RealtimeGoalHandlePtr goal_handle);
+  TrajectoryBuilder<SegmentImpl>* setGoalHandle(RealtimeGoalHandlePtr& goal_handle);
 
 public:
   /**
-   * @brief Ensures that builder does not influence life cycle of external variables
-   * by reseting all essential class members.
+   * @brief Ensures re-usability by allowing the user to reset members
+   * of the builder which should be reset between calls to buildTrajectory().
    */
   virtual void reset();
 
@@ -80,12 +80,17 @@ public:
   virtual bool buildTrajectory(Trajectory* trajectory) = 0;
 
 protected:
-  RealtimeGoalHandlePtr getGoalHandle() const;
+  RealtimeGoalHandlePtr createGoalHandlePtr() const;
   const boost::optional<typename Segment::Time>& getStartTime() const;
+
+protected:
+  static RealtimeGoalHandlePtr createDefaultGoalHandle();
 
 private:
   boost::optional<typename Segment::Time> start_time_   {boost::none};
-  boost::optional<RealtimeGoalHandlePtr> goal_handle_         {boost::none};
+  // We do not want to participate in the life time management of the
+  // goal handle, therefore, only a reference is stored.
+  boost::optional<RealtimeGoalHandlePtr&> goal_handle_  {boost::none};
 
 };
 
@@ -103,16 +108,22 @@ inline const boost::optional<typename TrajectoryBuilder<SegmentImpl>::Segment::T
 }
 
 template<class SegmentImpl>
-inline TrajectoryBuilder<SegmentImpl>* TrajectoryBuilder<SegmentImpl>::setGoalHandle(TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr goal_handle)
+inline TrajectoryBuilder<SegmentImpl>* TrajectoryBuilder<SegmentImpl>::setGoalHandle(TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr& goal_handle)
 {
   goal_handle_ = goal_handle;
   return this;
 }
 
 template<class SegmentImpl>
-inline typename TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr TrajectoryBuilder<SegmentImpl>::getGoalHandle() const
+inline typename TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr TrajectoryBuilder<SegmentImpl>::createGoalHandlePtr() const
 {
-  return goal_handle_ ? goal_handle_.value() : RealtimeGoalHandlePtr();
+  return goal_handle_ ? goal_handle_.value() : createDefaultGoalHandle();
+}
+
+template<class SegmentImpl>
+inline typename TrajectoryBuilder<SegmentImpl>::RealtimeGoalHandlePtr TrajectoryBuilder<SegmentImpl>::createDefaultGoalHandle()
+{
+  return RealtimeGoalHandlePtr();
 }
 
 template<class SegmentImpl>

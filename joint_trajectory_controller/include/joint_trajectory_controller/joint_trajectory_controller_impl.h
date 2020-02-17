@@ -323,9 +323,7 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
   }
   else
   {
-    StopTrajectoryBuilder<SegmentImpl>* builder {new StopTrajectoryBuilder<SegmentImpl>(n_joints, stop_trajectory_duration_)};
-    builder->setStartState(desired_state_);
-    hold_traj_builder_ = std::unique_ptr<TrajectoryBuilder<SegmentImpl> >(builder);
+    hold_traj_builder_ = std::unique_ptr<TrajectoryBuilder<SegmentImpl> >(new StopTrajectoryBuilder<SegmentImpl>(n_joints, stop_trajectory_duration_, desired_state_));
   }
 
   {
