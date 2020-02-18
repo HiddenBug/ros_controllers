@@ -316,6 +316,7 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
   successful_joint_traj_ = boost::dynamic_bitset<>(getNumberOfJoints());
 
   hold_trajectory_ptr_ = createHoldTrajectory(n_joints);
+  assert(joint_names_.size() == hold_trajectory_ptr_->size());
 
   if (stop_trajectory_duration_ == 0.0)
   {
@@ -728,7 +729,6 @@ template <class SegmentImpl, class HardwareInterface>
 inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
 {
-  assert(joint_names_.size() == hold_trajectory_ptr_->size());
   hold_traj_builder_
       ->setStartTime(time.toSec())
       ->setGoalHandle(gh)
