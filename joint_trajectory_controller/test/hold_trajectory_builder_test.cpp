@@ -31,12 +31,18 @@
 
 #include <gtest/gtest.h>
 
+#include <actionlib/server/action_server.h>
+
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/posvel_command_interface.h>
 #include <hardware_interface/posvelacc_command_interface.h>
 
 #include <joint_trajectory_controller/hold_trajectory_builder.h>
 #include <joint_trajectory_controller/joint_trajectory_segment.h>
+
+#include <realtime_tools/realtime_server_goal_handle.h>
 
 #include <trajectory_interface/quintic_spline_segment.h>
 
@@ -61,10 +67,14 @@ using JointHandle = hardware_interface::JointHandle;
 using PosVelJointHandle = hardware_interface::PosVelJointHandle;
 using PosVelAccJointHandle = hardware_interface::PosVelAccJointHandle;
 using JointStateHandle = hardware_interface::JointStateHandle;
+
 using QuinticSplineSegment = trajectory_interface::QuinticSplineSegment<double>;
 using Segment = joint_trajectory_controller::JointTrajectorySegment<QuinticSplineSegment>;
 using TrajectoryPerJoint = std::vector<Segment>;
 using Trajectory = std::vector<TrajectoryPerJoint>;
+
+using GoalHandle = actionlib::ActionServer<control_msgs::FollowJointTrajectoryAction>::GoalHandle;
+using RealTimeServerGoalHandle = realtime_tools::RealtimeServerGoalHandle<control_msgs::FollowJointTrajectoryAction>;
 
 /**
  * @brief Provides all known hardware interfaces.
@@ -222,6 +232,87 @@ TYPED_TEST(HoldTrajectoryBuilderTest, testBuildSuccess)
     trajectory[i][0].sample(trajectory[i][0].endTime(), sampled_state);
     EXPECT_TRUE(statesAlmostEqual<Segment>(sampled_state, expected_state));
   }
+}
+
+TYPED_TEST(HoldTrajectoryBuilderTest, testResetStartTime)
+{
+  using Builder = joint_trajectory_controller::HoldTrajectoryBuilder<QuinticSplineSegment, TypeParam>;
+
+  std::vector<typename TypeParam::ResourceHandleType> joints = this->getJointHandles();
+  auto number_of_joints = joints.size();
+  double start_time{0.0};
+
+  Builder builder(number_of_joints, joints);
+	builder.setStartTime(start_time);
+
+  builder.reset();
+
+  Trajectory trajectory;
+  this->initDefaultTrajectory(number_of_joints, trajectory);
+
+  EXPECT_FALSE(builder.buildTrajectory(&trajectory));
+}
+
+/**
+ * @note A non-empty goal handle cannot be created without an action server,
+ * therefore we check only how the use_count of the shared pointer changes.
+ */
+TYPED_TEST(HoldTrajectoryBuilderTest, testSetGoalHandle)
+{
+  using Builder = joint_trajectory_controller::HoldTrajectoryBuilder<QuinticSplineSegment, TypeParam>;
+
+  std::vector<typename TypeParam::ResourceHandleType> joints = this->getJointHandles();
+  auto number_of_joints = joints.size();
+  double start_time{0.0};
+  GoalHandle gh;
+  boost::shared_ptr<RealTimeServerGoalHandle> rt_goal_handle = boost::make_shared<RealTimeServerGoalHandle>(gh);
+
+  EXPECT_EQ(rt_goal_handle.use_count(), 1);
+
+  Builder builder(number_of_joints, joints);
+	builder.setStartTime(start_time);
+  builder.setGoalHandle(rt_goal_handle);
+
+  EXPECT_EQ(rt_goal_handle.use_count(), 1);
+
+  Trajectory trajectory;
+  this->initDefaultTrajectory(number_of_joints, trajectory);
+
+  EXPECT_TRUE(builder.buildTrajectory(&trajectory));
+
+  EXPECT_EQ(rt_goal_handle.use_count(), 3);
+}
+
+/**
+ * @note A non-empty goal handle cannot be created without an action server,
+ * therefore we check only how the use_count of the shared pointer changes.
+ */
+TYPED_TEST(HoldTrajectoryBuilderTest, testResetGoalHandle)
+{
+  using Builder = joint_trajectory_controller::HoldTrajectoryBuilder<QuinticSplineSegment, TypeParam>;
+
+  std::vector<typename TypeParam::ResourceHandleType> joints = this->getJointHandles();
+  auto number_of_joints = joints.size();
+  double start_time{0.0};
+  GoalHandle gh;
+  boost::shared_ptr<RealTimeServerGoalHandle> rt_goal_handle = boost::make_shared<RealTimeServerGoalHandle>(gh);
+
+  EXPECT_EQ(rt_goal_handle.use_count(), 1);
+
+  Builder builder(number_of_joints, joints);
+  builder.setGoalHandle(rt_goal_handle);
+
+  EXPECT_EQ(rt_goal_handle.use_count(), 1);
+
+  builder.reset();
+	builder.setStartTime(start_time);
+
+  Trajectory trajectory;
+  this->initDefaultTrajectory(number_of_joints, trajectory);
+
+  EXPECT_TRUE(builder.buildTrajectory(&trajectory));
+
+  EXPECT_EQ(rt_goal_handle.use_count(), 1);
 }
 
 }  // namespace hold_trajectory_builder_test
