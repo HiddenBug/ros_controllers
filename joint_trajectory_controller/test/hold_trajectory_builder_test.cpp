@@ -196,7 +196,7 @@ TYPED_TEST(HoldTrajectoryBuilderTest, testBuildSuccess)
 
   std::vector<typename TypeParam::ResourceHandleType> joints = this->getJointHandles();
   auto number_of_joints = joints.size();
-  double start_time{0.0};
+  double start_time{0.11};
 
   Builder builder(number_of_joints, joints);
 	builder.setStartTime(start_time);
