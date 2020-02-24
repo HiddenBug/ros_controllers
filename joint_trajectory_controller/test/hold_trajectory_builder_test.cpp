@@ -58,11 +58,82 @@ bool statesAlmostEqual(const typename SegmentType::State& state1,
 }
 
 using JointHandle = hardware_interface::JointHandle;
+using PosVelJointHandle = hardware_interface::PosVelJointHandle;
+using PosVelAccJointHandle = hardware_interface::PosVelAccJointHandle;
 using JointStateHandle = hardware_interface::JointStateHandle;
 using QuinticSplineSegment = trajectory_interface::QuinticSplineSegment<double>;
 using Segment = joint_trajectory_controller::JointTrajectorySegment<QuinticSplineSegment>;
 using TrajectoryPerJoint = std::vector<Segment>;
 using Trajectory = std::vector<TrajectoryPerJoint>;
+
+/**
+ * @brief Provides all known hardware interfaces.
+ */
+class FakeRobot
+{
+public:
+  FakeRobot()
+    : jsh1_("joint1", &pos1_, &vel2_, &eff1_),
+      jsh2_("joint2", &pos2_, &vel2_, &eff2_)
+  {
+  }
+
+  template<typename HardwareInterface>
+  std::vector<typename HardwareInterface::ResourceHandleType> getJointHandles();
+
+  void setPositions(const double& pos1, const double& pos2)
+  {
+    pos1_ = pos1;
+    pos2_ = pos2;
+  }
+
+private:
+  std::vector<JointHandle> getJointCommandHandles()
+  {
+	  JointHandle joint1(jsh1_, &cmd1_);
+	  JointHandle joint2(jsh2_, &cmd2_);
+    return {joint1, joint2};
+  }
+
+private:
+	double pos1_, vel1_, eff1_, cmd1_, vel_cmd1_, acc_cmd1_ = 0.0;
+	double pos2_, vel2_, eff2_, cmd2_, vel_cmd2_, acc_cmd2_ = 0.0;
+  JointStateHandle jsh1_, jsh2_;
+};
+
+template<>
+std::vector<JointHandle> FakeRobot::getJointHandles<hardware_interface::PositionJointInterface>()
+{
+  return getJointCommandHandles();
+}
+
+template<>
+std::vector<JointHandle> FakeRobot::getJointHandles<hardware_interface::VelocityJointInterface>()
+{
+  return getJointCommandHandles();
+}
+
+template<>
+std::vector<JointHandle> FakeRobot::getJointHandles<hardware_interface::EffortJointInterface>()
+{
+  return getJointCommandHandles();
+}
+
+template<>
+std::vector<PosVelJointHandle> FakeRobot::getJointHandles<hardware_interface::PosVelJointInterface>()
+{
+	PosVelJointHandle joint1(jsh1_, &cmd1_, &vel_cmd1_);
+	PosVelJointHandle joint2(jsh2_, &cmd2_, &vel_cmd2_);
+  return {joint1, joint2};
+}
+
+template<>
+std::vector<PosVelAccJointHandle> FakeRobot::getJointHandles<hardware_interface::PosVelAccJointInterface>()
+{
+	PosVelAccJointHandle joint1(jsh1_, &cmd1_, &vel_cmd1_, &acc_cmd1_);
+	PosVelAccJointHandle joint2(jsh2_, &cmd2_, &vel_cmd2_, &acc_cmd2_);
+  return {joint1, joint2};
+}
 
 template<typename HardwareInterface>
 class HoldTrajectoryBuilderTest : public testing::Test
@@ -75,14 +146,21 @@ public:
 	  TrajectoryPerJoint joint_traj{segment};
     trajectory.resize(number_of_joints, joint_traj);
   }
+
+  std::vector<typename HardwareInterface::ResourceHandleType> getJointHandles()
+  {
+    return robot_.getJointHandles<HardwareInterface>();
+  }
+
+public:
+  FakeRobot robot_;
 };
 
 using HardwareInterfaceTypes = testing::Types<hardware_interface::PositionJointInterface,
                                               hardware_interface::VelocityJointInterface,
-                                              hardware_interface::EffortJointInterface>;
-                                              // TODO:
-                                              //hardware_interface::PosVelJointInterface,
-                                              //hardware_interface::PosVelAccJointInterface
+                                              hardware_interface::EffortJointInterface,
+                                              hardware_interface::PosVelJointInterface,
+                                              hardware_interface::PosVelAccJointInterface>;
 
 TYPED_TEST_CASE(HoldTrajectoryBuilderTest, HardwareInterfaceTypes);
 
@@ -90,11 +168,7 @@ TYPED_TEST(HoldTrajectoryBuilderTest, testBuildNoStartTime)
 {
   using Builder = joint_trajectory_controller::HoldTrajectoryBuilder<QuinticSplineSegment, TypeParam>;
 
-	double pos, vel, eff, cmd = 1.1;
-
-	JointStateHandle jsh("joint", &pos, &vel, &eff);
-	JointHandle joint(jsh, &cmd);
-  std::vector<JointHandle> joints{joint};
+  std::vector<typename TypeParam::ResourceHandleType> joints = this->getJointHandles();
   auto number_of_joints = joints.size();
 
   Builder builder(number_of_joints, joints);
@@ -110,14 +184,7 @@ TYPED_TEST(HoldTrajectoryBuilderTest, testBuildSuccess)
 {
   using Builder = joint_trajectory_controller::HoldTrajectoryBuilder<QuinticSplineSegment, TypeParam>;
 
-	double pos1, vel1, eff1, pos2, vel2, eff2, cmd1, cmd2 = 1.1;
-
-	JointStateHandle jsh1("joint1", &pos1, &vel1, &eff1);
-	JointStateHandle jsh2("joint2", &pos2, &vel2, &eff2);
-	JointHandle joint1(jsh1, &cmd1);
-	JointHandle joint2(jsh2, &cmd2);
-  std::vector<JointHandle> joints{joint1, joint2};
-
+  std::vector<typename TypeParam::ResourceHandleType> joints = this->getJointHandles();
   auto number_of_joints = joints.size();
   double start_time{0.0};
 
@@ -126,6 +193,9 @@ TYPED_TEST(HoldTrajectoryBuilderTest, testBuildSuccess)
 
   Trajectory trajectory;
   this->initDefaultTrajectory(number_of_joints, trajectory);
+
+  std::vector<double> positions{-48.9, 2.1};  // set some arbitrary positions
+  this->robot_.setPositions(positions[0], positions[1]);
 
   EXPECT_TRUE(builder.buildTrajectory(&trajectory));
 
@@ -137,13 +207,14 @@ TYPED_TEST(HoldTrajectoryBuilderTest, testBuildSuccess)
   }
   EXPECT_NEAR(trajectory[0][0].startTime(), start_time, EPS);
 
+  // check start and end state
   Segment::State sampled_state{1};
   Segment::State expected_state{1};
   expected_state.velocity[0] = 0.0;
   expected_state.acceleration[0] = 0.0;
   for (unsigned int i = 0; i < number_of_joints; ++i)
   {
-    expected_state.position[0] = joints[i].getPosition();
+    expected_state.position[0] = positions[i];
 
     trajectory[i][0].sample(trajectory[i][0].startTime(), sampled_state);
     EXPECT_TRUE(statesAlmostEqual<Segment>(sampled_state, expected_state));
