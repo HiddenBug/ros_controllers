@@ -282,29 +282,13 @@ protected:
 
 private:
   /**
-   * @brief Function which can be used to check the newly calculated states for certain conditions (e.g. speed limit
-   * violation, etc.) before the hardware interface gets updated with the newly calucated values. The concret
-   * implementation details are left to the derived classes.
+   * @brief Allows derived classes to perform additional checks
+   * and to e.g. replace the newly calculated desired value before
+   * the hardware interface is finally updated.
    *
-   * @note This functions needs to be real time safe because the function is called witin the update() function.
-   *
-   * @param period Current control period.
-   *
-   * @return False if the checked states violate at least one condition, otherwise true.
+   * @param time_data Updated time data.
    */
-  virtual bool checkStates(const ros::Duration& period) const;
-
-  /**
-   * @brief If the checkStates() function fails, this function is called, in order, to e.g. calculate a new
-   * desired state, etc. The implementation details are left to the derived classes.
-   *
-   * @note This functions needs to be real time safe because the function is called witin the update() function.
-   *
-   * @param updated_uptime Newly calculated controller uptime.
-   *
-   * @param curr_traj Trajectory, currently, in trajectory box.
-   */
-  virtual void reactToFailedStateCheck(const ros::Time& curr_uptime);
+  virtual void updateFuncExtensionPoint(const TimeData& time_data);
 
 private:
   /**

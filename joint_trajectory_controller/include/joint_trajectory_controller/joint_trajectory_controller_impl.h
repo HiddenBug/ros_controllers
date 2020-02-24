@@ -455,10 +455,7 @@ update(const ros::Time& time, const ros::Duration& period)
     successful_joint_traj_.reset();
   }
 
-  if ( !checkStates(period) )
-  {
-    reactToFailedStateCheck(time_data.uptime);
-  }
+  updateFuncExtensionPoint(time_data);
 
   // Hardware interface adapter: Generate and send commands
   hw_iface_adapter_.updateCommand(time_data.uptime, time_data.period,
@@ -738,16 +735,8 @@ setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
 }
 
 template <class SegmentImpl, class HardwareInterface>
-inline bool JointTrajectoryController<SegmentImpl, HardwareInterface>::
-checkStates(const ros::Duration& /* period */) const
-{
-  // To be implemented by derived class
-  return true;
-}
-
-template <class SegmentImpl, class HardwareInterface>
 inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
-reactToFailedStateCheck(const ros::Time& curr_uptime)
+updateFuncExtensionPoint(const TimeData& time_data)
 {
   // To be implemented by derived class
 }
