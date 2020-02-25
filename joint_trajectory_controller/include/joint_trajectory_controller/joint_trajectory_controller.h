@@ -288,7 +288,7 @@ private:
    *
    * @param time_data Updated time data.
    */
-  virtual void updateFuncExtensionPoint(const TimeData& time_data);
+  virtual void updateFuncExtensionPoint(const Trajectory& curr_traj, const TimeData& time_data);
 
 private:
   /**
