@@ -56,6 +56,21 @@ add_library(${PROJECT_NAME} src/joint_trajectory_controller.cpp
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
+add_library(${PROJECT_NAME}_revised
+                            include/joint_trajectory_controller/hardware_interface_adapter.h
+                            include/joint_trajectory_controller/init_joint_trajectory.h
+                            include/joint_trajectory_controller/joint_trajectory_controller_revised.h
+                            include/joint_trajectory_controller/joint_trajectory_controller_impl_revised.h
+                            include/joint_trajectory_controller/joint_trajectory_msg_utils.h
+                            include/joint_trajectory_controller/joint_trajectory_segment.h
+                            include/joint_trajectory_controller/tolerances.h
+                            include/trajectory_interface/trajectory_interface.h
+                            include/trajectory_interface/quintic_spline_segment.h
+                            include/trajectory_interface/pos_vel_acc_state.h)
+target_link_libraries(${PROJECT_NAME}_revised ${catkin_LIBRARIES})
+set_target_properties(${PROJECT_NAME}_revised PROPERTIES LINKER_LANGUAGE CXX)
+
+
 if(CATKIN_ENABLE_TESTING)
   find_package(catkin
     REQUIRED COMPONENTS
@@ -126,6 +141,21 @@ if(CATKIN_ENABLE_TESTING)
                     test/joint_trajectory_controller_wrapping.test
                     test/joint_trajectory_controller_wrapping_test.cpp)
   target_link_libraries(joint_trajectory_controller_wrapping_test ${catkin_LIBRARIES})
+
+  catkin_add_gtest(unittest_pure_joint_trajectory_controller
+      test/unittest_pure_joint_trajectory_controller.cpp)
+  target_link_libraries(unittest_pure_joint_trajectory_controller ${catkin_LIBRARIES})
+
+  if(ENABLE_CONTROLLER_BENCHMARK_TESTS)
+      # To execute the benchmark test locally install:
+      # sudo apt-get install libbenchmark1
+      # sudo apt-get install libbenchmark-dev
+      find_package(benchmark REQUIRED)
+
+      add_executable(unittest_benchmark_controller
+          test/unittest_benchmark_controller.cpp)
+      target_link_libraries(unittest_benchmark_controller ${catkin_LIBRARIES} benchmark::benchmark)
+  endif()
 
 endif()
 
