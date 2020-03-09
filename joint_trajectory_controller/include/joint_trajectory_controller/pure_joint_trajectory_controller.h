@@ -103,8 +103,8 @@ public:
 
 public:
   virtual const std::string& getControllerName() const = 0;
-  virtual const double& getStatePublishRate() const = 0;
-  virtual const double& getActionMonitorRate() const = 0;
+  virtual const ros::Duration& getStatePublishRate() const = 0;
+  virtual const ros::Duration& getActionMonitorRate() const = 0;
   virtual const double& getStopTrajectoryDuration() const = 0;
 };
 
@@ -115,20 +115,20 @@ public:
 
 public:
   void setControllerName(const std::string& name);
-  void setStatePublishRate(const double& rate);
-  void setActionMonitorRate(const double& rate);
+  void setStatePublishRate(const ros::Duration& rate);
+  void setActionMonitorRate(const ros::Duration& rate);
   void setStopTrajectoryDuration(const double& duration);
 
 public:
   const std::string& getControllerName() const override;
-  const double& getStatePublishRate() const override;
-  const double& getActionMonitorRate() const override;
+  const ros::Duration &getStatePublishRate() const override;
+  const ros::Duration& getActionMonitorRate() const override;
   const double& getStopTrajectoryDuration() const override;
 
 private:
   std::string controller_name_;
-  double state_publish_rate_ {0.};
-  double action_monitor_rate_ {0.};
+  ros::Duration state_publish_rate_ {0.};
+  ros::Duration action_monitor_rate_ {0.};
   double stop_traj_duration_ {0.};
 };
 
@@ -183,12 +183,12 @@ inline void EditableControllerSettings::setControllerName(const std::string& nam
   controller_name_ = name;
 }
 
-inline void EditableControllerSettings::setStatePublishRate(const double& rate)
+inline void EditableControllerSettings::setStatePublishRate(const ros::Duration &rate)
 {
   state_publish_rate_ = rate;
 }
 
-inline void EditableControllerSettings::setActionMonitorRate(const double& rate)
+inline void EditableControllerSettings::setActionMonitorRate(const ros::Duration& rate)
 {
   action_monitor_rate_ = rate;
 }
@@ -203,12 +203,12 @@ inline const std::string& EditableControllerSettings::getControllerName() const
   return controller_name_;
 }
 
-inline const double& EditableControllerSettings::getStatePublishRate() const
+inline const ros::Duration& EditableControllerSettings::getStatePublishRate() const
 {
   return state_publish_rate_;
 }
 
-inline const double& EditableControllerSettings::getActionMonitorRate() const
+inline const ros::Duration& EditableControllerSettings::getActionMonitorRate() const
 {
   return action_monitor_rate_;
 }

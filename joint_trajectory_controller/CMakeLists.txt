@@ -57,6 +57,7 @@ add_library(${PROJECT_NAME} src/joint_trajectory_controller.cpp
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_library(${PROJECT_NAME}_revised
+                            src/joint_trajectory_controller_revised.cpp
                             include/joint_trajectory_controller/hardware_interface_adapter.h
                             include/joint_trajectory_controller/init_joint_trajectory.h
                             include/joint_trajectory_controller/joint_trajectory_controller_revised.h

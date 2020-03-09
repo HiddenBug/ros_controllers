@@ -74,6 +74,6 @@ public:
 
 }
 
-#include<pilz_control/joint_trajectory_controller_impl_revised.h>
+#include<joint_trajectory_controller/joint_trajectory_controller_impl_revised.h>
 
 #endif
