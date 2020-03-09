@@ -31,6 +31,20 @@
 #ifndef HELPER_FUNCTIONS_H
 #define HELPER_FUNCTIONS_H
 
+// C++ standard
+#include <stdexcept>
+#include <vector>
+#include <string>
+
+// Boost
+#include <boost/shared_ptr.hpp>
+
+// URDF
+#include <urdf/model.h>
+
+// ROS
+#include <ros/node_handle.h>
+
 namespace joint_trajectory_controller
 {
 
