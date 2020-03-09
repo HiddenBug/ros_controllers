@@ -140,6 +140,50 @@ std::string getLeafNamespace(const ros::NodeHandle& nh)
   return complete_ns.substr(id + 1);
 }
 
+class UrdfModelMissing : public std::runtime_error
+{
+  public:
+    UrdfModelMissing():
+      std::runtime_error("URDF model missing")
+    {
+    }
+};
+
+class NumberOfUrdfJointsIncorrect : public std::runtime_error
+{
+  public:
+    NumberOfUrdfJointsIncorrect():
+      std::runtime_error("Number of joints in URDF model incorrect")
+    {
+    }
+};
+
+static std::vector<bool> getAngleWraparound(ros::NodeHandle& root_nh,
+                                            const std::vector<std::string>& joint_names)
+{
+  std::vector<bool> angle_wraparound;
+  angle_wraparound.resize(joint_names.size());
+
+  urdf::ModelSharedPtr urdf = getUrdf(root_nh, "robot_description");
+  if (!urdf)
+  {
+    throw UrdfModelMissing();
+  }
+
+  std::vector<urdf::JointConstSharedPtr> urdf_joints = getUrdfJoints(*urdf, joint_names);
+  if ( urdf_joints.empty() || (joint_names.size() != urdf_joints.size()) )
+  {
+    throw NumberOfUrdfJointsIncorrect();
+  }
+
+  for (unsigned int i = 0; i < joint_names.size(); ++i)
+  {
+    angle_wraparound.at(i) = urdf_joints.at(i)->type == urdf::Joint::CONTINUOUS;
+  }
+
+  return angle_wraparound;
+}
+
 } // namespace
 
 }

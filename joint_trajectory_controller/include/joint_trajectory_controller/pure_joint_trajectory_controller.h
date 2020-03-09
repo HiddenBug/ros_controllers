@@ -31,10 +31,12 @@
 #ifndef PURE_JOINT_TRAJECTORY_CONTROLLER_H
 #define PURE_JOINT_TRAJECTORY_CONTROLLER_H
 
+// C++ standard
 #include <string>
 #include <vector>
 #include <memory>
 
+// ROS
 #include <ros/time.h>
 #include <ros/duration.h>
 
@@ -46,8 +48,44 @@
 // actionlib
 #include <actionlib/server/action_server.h>
 
+// Project
+#include <joint_trajectory_controller/tolerances.h>
+
 namespace pure_joint_trajectory_controller
 {
+
+/**
+ * @brief Stores settings which configures the HWInputHandle.
+ */
+class HWInputHandleSettings
+{
+public:
+  virtual ~HWInputHandleSettings() = default;
+
+public:
+  virtual const std::vector<bool>& getAngleWrapAround() const = 0;
+  virtual const std::vector<std::string>& getJointNames() const = 0;
+  virtual const unsigned int getNumberOfJoints() const = 0;
+};
+
+class EditableHWInputHandleSettings : public HWInputHandleSettings
+{
+public:
+  EditableHWInputHandleSettings();
+
+public:
+  const std::vector<bool>& getAngleWrapAround() const override;
+  const std::vector<std::string>& getJointNames() const override;
+  const unsigned int getNumberOfJoints() const override;
+
+public:
+  void setAngleWrapAround(const std::vector<bool>& angle_wrap_around);
+  void setJointNames(const std::vector<std::string>& joint_names);
+
+private:
+  std::vector<bool> angle_wrap_around_;
+  std::vector<std::string> joint_names_;
+};
 
 /**
  * @brief Interface to obtain information from the hardware interface.
@@ -56,14 +94,32 @@ template<class State>
 class HWInputHandle
 {
 public:
+  HWInputHandle(std::unique_ptr<HWInputHandleSettings> settings);
   virtual ~HWInputHandle() = default;
 
 public:
   virtual const State& getState() const = 0;
 
 public:
-  virtual const std::vector<bool>& getAngleWrapAround() const = 0;
-  virtual const std::vector<std::string>& getJointNames() const = 0;
+  const HWInputHandleSettings* const getSettings() const;
+
+private:
+  std::unique_ptr<HWInputHandleSettings> settings_;
+};
+
+template<class State, class JointHandle>
+class JointHandleHWInputHandle : public HWInputHandle<State>
+{
+public:
+  JointHandleHWInputHandle(std::unique_ptr<HWInputHandleSettings> settings,
+                           const std::vector<JointHandle>& joint_handles);
+
+public:
+  const State& getState() const override;
+
+private:
+  //! We do not participate in the life time management!
+  const std::vector<JointHandle>& joint_handles_;
 };
 
 /**
@@ -76,8 +132,23 @@ public:
   virtual ~HWOutputHandle() = default;
 
 public:
-  virtual void setState(const State& desired, const State& error) = 0;
+  virtual void updateHardware(const ros::Time& uptime, const ros::Duration& period,
+                              const State& desired, const State& error) = 0;
 
+};
+
+template<class State, class HwIfaceAdapter>
+class HWOutputHandleForHWInterfaceAdapter : public HWOutputHandle<State>
+{
+public:
+  HWOutputHandleForHWInterfaceAdapter(std::unique_ptr<HwIfaceAdapter> adapter);
+
+public:
+  void updateHardware(const ros::Time& uptime, const ros::Duration& period,
+                      const State& desired, const State& error) override;
+
+private:
+  std::unique_ptr<HwIfaceAdapter> adapter_;
 };
 
 /**
@@ -96,6 +167,7 @@ public:
 /**
  * @brief Interface for storing and combining controller settings.
  */
+template<class SegmentTolerances>
 class ControllerSettings
 {
 public:
@@ -106,9 +178,12 @@ public:
   virtual const ros::Duration& getStatePublishRate() const = 0;
   virtual const ros::Duration& getActionMonitorRate() const = 0;
   virtual const double& getStopTrajectoryDuration() const = 0;
+  virtual const SegmentTolerances& getDefaultSegmentTolerances() const = 0;
+  virtual const bool& arePartialJointGoalsAllowed() const = 0;
 };
 
-class EditableControllerSettings : public ControllerSettings
+template<class SegmentTolerances>
+class EditableControllerSettings : public ControllerSettings<SegmentTolerances>
 {
 public:
   EditableControllerSettings();
@@ -118,18 +193,24 @@ public:
   void setStatePublishRate(const ros::Duration& rate);
   void setActionMonitorRate(const ros::Duration& rate);
   void setStopTrajectoryDuration(const double& duration);
+  void setDefaultSegmentTolerances(const SegmentTolerances& tolerances);
+  void setPartialJointGoals(const bool& partial_goals);
 
 public:
   const std::string& getControllerName() const override;
   const ros::Duration &getStatePublishRate() const override;
   const ros::Duration& getActionMonitorRate() const override;
   const double& getStopTrajectoryDuration() const override;
+  const SegmentTolerances& getDefaultSegmentTolerances() const override;
+  const bool& arePartialJointGoalsAllowed() const override;
 
 private:
   std::string controller_name_;
   ros::Duration state_publish_rate_ {0.};
   ros::Duration action_monitor_rate_ {0.};
   double stop_traj_duration_ {0.};
+  SegmentTolerances default_tolerances_;
+  bool partial_joint_goals_allowed_ {false};
 };
 
 template<class State>
@@ -146,8 +227,7 @@ public:
   }
 
   PureJointTrajectoryController(std::unique_ptr<HWInputHandle<State> >  hw_input,
-                                std::unique_ptr<HWOutputHandle<State> > hw_output,
-                                std::unique_ptr<ControllerSettings> settings)
+                                std::unique_ptr<HWOutputHandle<State> > hw_output)
   {
 
   }
@@ -171,53 +251,8 @@ public: // ROS callback and service functions
 
 };
 
-
-inline EditableControllerSettings::EditableControllerSettings()
-  : ControllerSettings()
-{
-
 }
 
-inline void EditableControllerSettings::setControllerName(const std::string& name)
-{
-  controller_name_ = name;
-}
-
-inline void EditableControllerSettings::setStatePublishRate(const ros::Duration &rate)
-{
-  state_publish_rate_ = rate;
-}
-
-inline void EditableControllerSettings::setActionMonitorRate(const ros::Duration& rate)
-{
-  action_monitor_rate_ = rate;
-}
-
-inline void EditableControllerSettings::setStopTrajectoryDuration(const double& duration)
-{
-  stop_traj_duration_ = duration;
-}
-
-inline const std::string& EditableControllerSettings::getControllerName() const
-{
-  return controller_name_;
-}
-
-inline const ros::Duration& EditableControllerSettings::getStatePublishRate() const
-{
-  return state_publish_rate_;
-}
-
-inline const ros::Duration& EditableControllerSettings::getActionMonitorRate() const
-{
-  return action_monitor_rate_;
-}
-
-inline const double& EditableControllerSettings::getStopTrajectoryDuration() const
-{
-  return stop_traj_duration_;
-}
-
-}
+#include <joint_trajectory_controller/pure_joint_trajectory_controller_impl.h>
 
 #endif // PURE_JOINT_TRAJECTORY_CONTROLLER_H

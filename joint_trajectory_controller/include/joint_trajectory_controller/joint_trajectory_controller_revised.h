@@ -33,12 +33,33 @@
 
 #include <controller_interface/controller.h>
 
+// C++ standard
+#include <vector>
+#include <string>
+#include <memory>
+
 // ROS
 #include <ros/node_handle.h>
 #include <ros/time.h>
 #include <ros/duration.h>
 
+// ROS messages
+#include <control_msgs/FollowJointTrajectoryAction.h>
+#include <control_msgs/JointTrajectoryControllerState.h>
+#include <control_msgs/QueryTrajectoryState.h>
+#include <trajectory_msgs/JointTrajectory.h>
+
+// actionlib
+#include <actionlib/server/action_server.h>
+
+// realtime_tools
+#include <realtime_tools/realtime_publisher.h>
+
+// Project
 #include <joint_trajectory_controller/pure_joint_trajectory_controller.h>
+#include <joint_trajectory_controller/joint_trajectory_segment.h>
+
+using namespace pure_joint_trajectory_controller;
 
 namespace joint_trajectory_controller_revised
 {
@@ -47,12 +68,7 @@ template <class SegmentImpl, class HardwareInterface>
 class JointTrajectoryControllerRevised: public controller_interface::Controller<HardwareInterface>
 {
 public:
-  JointTrajectoryControllerRevised()
-    : controller_interface::Controller<HardwareInterface>()
-  {
-
-  }
-
+  JointTrajectoryControllerRevised();
   virtual ~JointTrajectoryControllerRevised<SegmentImpl, HardwareInterface>() = default;
 
 public:
@@ -69,6 +85,41 @@ public:
 
   void update(const ros::Time& time, const ros::Duration& period) override;
   /*\}*/
+
+private:
+  using Segment         = joint_trajectory_controller::JointTrajectorySegment<SegmentImpl>;
+  using JointHandle     = typename HardwareInterface::ResourceHandleType;
+
+  using ActionServer    = actionlib::ActionServer<control_msgs::FollowJointTrajectoryAction>;
+  using GoalHandle      = ActionServer::GoalHandle;
+  using StatePublisher  = realtime_tools::RealtimePublisher<control_msgs::JointTrajectoryControllerState>;
+
+private:
+  void goalCB(GoalHandle gh);
+  void cancelCB(GoalHandle gh);
+  bool queryStateService(control_msgs::QueryTrajectoryState::Request&  req,
+                         control_msgs::QueryTrajectoryState::Response& resp);
+  void trajectoryCommandCB(const trajectory_msgs::JointTrajectory::ConstPtr& msg);
+
+  void setupROSConnections(ros::NodeHandle& controller_nh);
+
+private:
+  // ROS API
+  ros::NodeHandle controller_nh_;
+  ros::Subscriber trajectory_command_sub_;
+  std::unique_ptr<ActionServer> action_server_;
+  ros::ServiceServer query_state_service_;
+  std::unique_ptr<StatePublisher> state_publisher_;
+
+private:
+  //! DO NOT USE DIRECTLY!
+  //! The Input- AND Output-Handler of the
+  //! controller need access to the joint handles, therefore,
+  //! a "superior" instance needs to take care of the life time management.
+  std::vector<JointHandle> joint_handles_;
+
+  std::string controller_name_;
+  std::unique_ptr<PureJointTrajectoryController<typename Segment::State> > pure_controller_;
 
 };
 
